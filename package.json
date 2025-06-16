@@ -1,0 +1,72 @@
+{
+  "name": "advanced-cache-manager",
+  "version": "1.0.0",
+  "description": "A production-ready Node.js caching solution with multi-backend support and intelligent cache management",
+  "main": "dist/index.js",
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "benchmark": "node dist/benchmarks/index.js",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "prepublishOnly": "npm run build && npm test",
+    "prepack": "npm run build"
+  },
+  "keywords": [
+    "cache",
+    "caching",
+    "redis",
+    "memcached",
+    "memory-cache",
+    "layered-cache",
+    "cache-manager",
+    "performance",
+    "typescript"
+  ],
+  "author": "Advanced Cache Manager Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ersinkoc/advanced-cache-manager.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ersinkoc/advanced-cache-manager/issues"
+  },
+  "homepage": "https://github.com/ersinkoc/advanced-cache-manager#readme",
+  "dependencies": {
+    "ioredis": "^5.3.2",
+    "lru-cache": "^10.0.1",
+    "memcached": "^2.2.2",
+    "msgpack5": "^6.0.2",
+    "pako": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.5",
+    "@types/memcached": "^2.2.10",
+    "@types/msgpack5": "^3.4.6",
+    "@types/node": "^20.8.0",
+    "@types/pako": "^2.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.7.0",
+    "@typescript-eslint/parser": "^6.7.0",
+    "eslint": "^8.50.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.0.3",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
