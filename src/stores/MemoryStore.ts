@@ -251,8 +251,12 @@ export class MemoryStore extends BaseStore {
   }
 
   private patternToRegex(pattern: string): RegExp {
-    const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regexPattern = escaped.replace(/\\\*/g, '.*').replace(/\\\?/g, '.');
+    // First, escape all special regex characters EXCEPT * and ?
+    // We need to handle * and ? separately as they are wildcard characters in glob patterns
+    let regexPattern = pattern
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')  // Escape special chars (note: * and ? not included)
+      .replace(/\*/g, '.*')   // Convert glob * to regex .*
+      .replace(/\?/g, '.');   // Convert glob ? to regex .
     return new RegExp(`^${regexPattern}$`);
   }
 

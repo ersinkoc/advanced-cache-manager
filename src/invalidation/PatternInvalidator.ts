@@ -49,10 +49,4 @@ export class PatternInvalidator {
     const results = await Promise.all(promises);
     return results.reduce((total, count) => total + count, 0);
   }
-
-  private patternToRegex(pattern: string): RegExp {
-    const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regexPattern = escaped.replace(/\\\*/g, '.*').replace(/\\\?/g, '.');
-    return new RegExp(`^${regexPattern}$`);
-  }
 }

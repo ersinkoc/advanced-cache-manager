@@ -5,7 +5,7 @@ export class GzipCompressor implements ICompressor {
   private compressionLevel: number;
 
   constructor(compressionLevel: number = 6) {
-    this.compressionLevel = Math.max(1, Math.min(9, compressionLevel)) as any;
+    this.compressionLevel = Math.max(1, Math.min(9, compressionLevel));
   }
 
   compress(data: Buffer | string): Buffer {
@@ -16,7 +16,8 @@ export class GzipCompressor implements ICompressor {
         throw new CompressionError('Cannot compress empty data');
       }
 
-      const compressed = pako.gzip(input, { level: this.compressionLevel as any });
+      // Cast to expected pako compression level type (0-9 or -1)
+      const compressed = pako.gzip(input, { level: this.compressionLevel as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 });
       return Buffer.from(compressed);
     } catch (error) {
       if (error instanceof CompressionError) {
@@ -65,7 +66,7 @@ export class GzipCompressor implements ICompressor {
   }
 
   setLevel(level: number): void {
-    this.compressionLevel = Math.max(1, Math.min(9, level)) as any;
+    this.compressionLevel = Math.max(1, Math.min(9, level));
   }
 
   shouldCompress(data: Buffer | string, threshold: number = 1024): boolean {

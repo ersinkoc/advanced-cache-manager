@@ -68,17 +68,18 @@ export class MemcachedStore extends BaseStore {
 
           try {
             const entry: CacheEntry = JSON.parse(data as string);
-            
+
             if (this.isExpired(entry.createdAt, entry.ttl)) {
               this.memcached.del(key, () => {});
               resolve(null);
               return;
             }
 
-            entry.lastAccessed = Date.now();
-            const ttl = entry.ttl || 3600;
-            this.memcached.set(key, JSON.stringify(entry), ttl, () => {});
-            
+            // Note: We don't update lastAccessed or reset TTL on read to avoid
+            // unintentionally extending the life of cache entries on every access.
+            // If sliding expiration is desired, it should be implemented as a
+            // separate feature with explicit configuration.
+
             resolve(entry.value as T);
           } catch (error) {
             reject(error);
@@ -139,37 +140,61 @@ export class MemcachedStore extends BaseStore {
     return this.executeWithCircuitBreaker(async () => {
       this.validateKey(key);
 
-      const entry = await this.get(key);
-      
+      // First, fetch the raw entry data to get tags and dependencies for cleanup
       return new Promise<boolean>((resolve, reject) => {
-        this.memcached.del(key, (err: any) => {
-          if (err) {
-            reject(err);
+        this.memcached.get(key, (getErr: any, data: any) => {
+          if (getErr) {
+            reject(getErr);
             return;
           }
 
-          if (entry) {
+          if (!data) {
+            resolve(false);
+            return;
+          }
+
+          // Parse entry to extract tags and dependencies
+          let tags: string[] | undefined;
+          let dependencies: string[] | undefined;
+
+          try {
+            const entry: CacheEntry = JSON.parse(data as string);
+            tags = entry.tags;
+            dependencies = entry.dependencies;
+          } catch (error) {
+            console.warn('Failed to parse entry for cleanup:', error);
+          }
+
+          // Now delete the key
+          this.memcached.del(key, (delErr: any) => {
+            if (delErr) {
+              reject(delErr);
+              return;
+            }
+
+            // Clean up tags and dependencies indexes
             const promises: Promise<void>[] = [];
-            
-            const data = entry as any;
-            if (data.tags) {
-              for (const tag of data.tags) {
+
+            if (tags && Array.isArray(tags)) {
+              for (const tag of tags) {
                 promises.push(this.removeFromSet(`${this.tagPrefix}${tag}`, key));
               }
             }
 
-            if (data.dependencies) {
-              for (const dependency of data.dependencies) {
+            if (dependencies && Array.isArray(dependencies)) {
+              for (const dependency of dependencies) {
                 promises.push(this.removeFromSet(`${this.dependencyPrefix}${dependency}`, key));
               }
             }
 
-            Promise.all(promises)
-              .then(() => resolve(true))
-              .catch(() => resolve(true));
-          } else {
-            resolve(false);
-          }
+            if (promises.length > 0) {
+              Promise.all(promises)
+                .then(() => resolve(true))
+                .catch(() => resolve(true)); // Still resolve true even if cleanup fails
+            } else {
+              resolve(true);
+            }
+          });
         });
       });
     });
