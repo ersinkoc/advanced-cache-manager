@@ -48,15 +48,17 @@ export class RedisStore extends BaseStore {
 
       try {
         const entry: CacheEntry = JSON.parse(data);
-        
+
         if (this.isExpired(entry.createdAt, entry.ttl)) {
           await this.redis.del(key);
           return null;
         }
 
-        entry.lastAccessed = Date.now();
-        await this.redis.set(key, JSON.stringify(entry), 'EX', entry.ttl || 3600);
-        
+        // Note: We don't update lastAccessed or reset TTL on read to avoid
+        // unintentionally extending the life of cache entries on every access.
+        // If sliding expiration is desired, it should be implemented as a
+        // separate feature with explicit configuration.
+
         return entry.value as T;
       } catch (error) {
         this.handleError(error, 'get');
@@ -106,34 +108,33 @@ export class RedisStore extends BaseStore {
   async del(key: CacheKey): Promise<boolean> {
     return this.executeWithCircuitBreaker(async () => {
       this.validateKey(key);
-      
-      const entry = await this.get(key);
-      if (!entry) {
+
+      // Fetch raw data once before deletion to avoid race condition
+      const data = await this.redis.get(key);
+      if (!data) {
         return false;
       }
 
       const pipeline = this.redis.pipeline();
       pipeline.del(key);
 
-      const data = await this.redis.get(key);
-      if (data) {
-        try {
-          const parsedEntry: CacheEntry = JSON.parse(data);
-          
-          if (parsedEntry.tags) {
-            for (const tag of parsedEntry.tags) {
-              pipeline.srem(`${this.tagPrefix}${tag}`, key);
-            }
-          }
+      // Parse the data to clean up tags and dependencies
+      try {
+        const parsedEntry: CacheEntry = JSON.parse(data);
 
-          if (parsedEntry.dependencies) {
-            for (const dependency of parsedEntry.dependencies) {
-              pipeline.srem(`${this.dependencyPrefix}${dependency}`, key);
-            }
+        if (parsedEntry.tags) {
+          for (const tag of parsedEntry.tags) {
+            pipeline.srem(`${this.tagPrefix}${tag}`, key);
           }
-        } catch (error) {
-          console.warn('Failed to parse entry for cleanup:', error);
         }
+
+        if (parsedEntry.dependencies) {
+          for (const dependency of parsedEntry.dependencies) {
+            pipeline.srem(`${this.dependencyPrefix}${dependency}`, key);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to parse entry for cleanup:', error);
       }
 
       const results = await pipeline.exec();

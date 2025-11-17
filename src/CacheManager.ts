@@ -319,9 +319,4 @@ export class CacheManager implements ICacheManager {
     this.patternInvalidator = new PatternInvalidator(this.stores);
     this.dependencyInvalidator = new DependencyInvalidator(this.stores);
   }
-
-  private shouldCompress(value: any): boolean {
-    const size = Buffer.isBuffer(value) ? value.length : Buffer.byteLength(String(value), 'utf8');
-    return size >= this.compressionThreshold;
-  }
 }
