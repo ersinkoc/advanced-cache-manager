@@ -21,8 +21,12 @@ export class MemoryStore extends BaseStore {
     const options: LRUCache.Options<CacheKey, CacheEntry, unknown> = {
       max: config.max || 1000,
       ttl: config.ttl ? config.ttl * 1000 : undefined,
-      updateAgeOnGet: true,
-      updateAgeOnHas: true,
+      // Note: We don't update age on get/has to avoid unintentionally extending
+      // the life of cache entries on every access. This matches the behavior of
+      // RedisStore and MemcachedStore. If sliding expiration is desired, it
+      // should be implemented as a separate feature with explicit configuration.
+      updateAgeOnGet: false,
+      updateAgeOnHas: false,
       dispose: (value, key) => {
         this.cleanupIndexes(key, value);
       },
