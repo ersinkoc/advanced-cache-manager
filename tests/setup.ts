@@ -45,16 +45,20 @@ jest.mock('ioredis', () => {
 });
 
 jest.mock('memcached', () => {
-  return jest.fn().mockImplementation(() => ({
-    get: jest.fn(),
-    set: jest.fn(),
-    del: jest.fn(),
-    getMulti: jest.fn(),
-    flush: jest.fn(),
-    end: jest.fn(),
-    stats: jest.fn(),
-    on: jest.fn()
-  }));
+  // Return a constructor function that creates a mock memcached instance
+  function MockMemcached() {
+    return {
+      get: jest.fn(),
+      set: jest.fn(),
+      del: jest.fn(),
+      getMulti: jest.fn(),
+      flush: jest.fn(),
+      end: jest.fn(),
+      stats: jest.fn(),
+      on: jest.fn()
+    };
+  }
+  return MockMemcached;
 });
 
 jest.mock('msgpack5', () => {
