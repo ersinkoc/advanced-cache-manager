@@ -16,6 +16,10 @@ export class MemcachedStore extends BaseStore {
   private servers: string[];
   private tagPrefix = 'tag:';
   private dependencyPrefix = 'dep:';
+  // Default TTL for tag/dependency index sets (30 days).
+  // Using a long TTL ensures index sets don't expire prematurely when entries
+  // are removed. Stale references are cleaned up when accessed.
+  private indexSetDefaultTTL = 2592000;
 
   constructor(config: StoreConfig) {
     super(config);
@@ -414,7 +418,9 @@ export class MemcachedStore extends BaseStore {
           if (set.size === 0) {
             this.memcached.del(setKey, () => resolve());
           } else {
-            this.memcached.set(setKey, JSON.stringify(Array.from(set)), 3600, (setErr: any) => {
+            // Use the default index TTL instead of a hardcoded value to ensure
+            // consistency with how sets are created in addToSet
+            this.memcached.set(setKey, JSON.stringify(Array.from(set)), this.indexSetDefaultTTL, (setErr: any) => {
               if (setErr) {
                 reject(setErr);
               } else {
